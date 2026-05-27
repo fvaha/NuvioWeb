@@ -29,7 +29,7 @@ It acts as a client-side interface that can integrate with the **Stremio addon e
 ### TizenBrew
 
 - Open TizenBrew on your Samsung TV
-- Add the GitHub module `NuvioMedia/NuvioTVTizen`
+- Add the GitHub module `NuvioMedia/NuvioTVTizenBrew`
 - Launch Nuvio TV from your installed modules
 
 ### webOS Homebrew
