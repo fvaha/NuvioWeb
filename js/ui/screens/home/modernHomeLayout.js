@@ -105,6 +105,7 @@ export function renderModernHomeLayout({
           heroItem,
           heroCandidates,
           buildModernHeroPresentation,
+          renderHeroBackdropImage,
           escapeHtml,
           escapeAttribute
         }) : (continueWatchingLoading ? renderModernHeroSkeletonMarkup() : "")}

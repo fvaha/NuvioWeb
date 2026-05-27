@@ -182,7 +182,7 @@ function encodeHeroBackdropFallbacks(sources = []) {
 }
 
 function getHeroBackdropErrorHandler() {
-  return "const q=(this.dataset.fallbackSrcs||'').split('|').filter(Boolean);const next=q.shift();if(next){this.dataset.fallbackSrcs=q.join('|');this.src=decodeURIComponent(next);return;}this.removeAttribute('src');this.classList.add('placeholder');";
+  return "var q=(this.dataset.fallbackSrcs||'').split('|').filter(Boolean);var next=q.shift();if(next){this.dataset.fallbackSrcs=q.join('|');this.src=decodeURIComponent(next);return;}this.removeAttribute('src');this.classList.add('placeholder');";
 }
 
 function renderHeroBackdropImage(display) {

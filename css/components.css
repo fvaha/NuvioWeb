@@ -4308,12 +4308,24 @@ button:focus-visible {
 .home-screen-shell .home-hero-backdrop-wrap,
 .home-screen-shell .home-hero-backdrop {
   position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   width: 100%;
   height: 100%;
 }
 
 .home-screen-shell .home-hero-backdrop {
+  position: absolute;
+  display: block;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   opacity: 0.96;
 }
@@ -4328,6 +4340,10 @@ button:focus-visible {
 .home-screen-shell .home-hero-card::after {
   content: "";
   position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   pointer-events: none;
 }
@@ -5447,6 +5463,10 @@ button:focus-visible {
 .home-screen-shell.home-layout-modern .home-hero,
 .home-screen-shell.home-layout-modern .home-modern-hero-card {
   position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   z-index: 1;
 }
@@ -5464,6 +5484,10 @@ button:focus-visible {
 .home-screen-shell.home-layout-modern .home-modern-hero-media::after {
   content: "";
   position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   pointer-events: none;
   z-index: 1;
@@ -5500,7 +5524,22 @@ button:focus-visible {
 .home-screen-shell.home-layout-modern .home-modern-hero-media .home-hero-backdrop-wrap,
 .home-screen-shell.home-layout-modern .home-modern-hero-media .home-hero-backdrop {
   position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.home-screen-shell.home-layout-modern .home-modern-hero-media .home-hero-backdrop {
+  position: absolute;
+  display: block;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   width: 100%;
   height: 100%;
 }
@@ -5536,6 +5575,10 @@ button:focus-visible {
 
 .home-screen-shell.home-layout-modern .home-hero-trailer-layer {
   position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   z-index: 0;
   opacity: 0;
@@ -5547,6 +5590,10 @@ button:focus-visible {
 .home-screen-shell.home-layout-modern .home-hero-trailer-layer .home-inline-trailer-frame,
 .home-screen-shell.home-layout-modern .home-hero-trailer-layer .home-inline-trailer-video {
   position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -12816,6 +12863,76 @@ button:focus-visible {
   overflow: hidden;
 }
 
+.legacy-webos .home-screen-shell.home-layout-modern .home-hero,
+.legacy-webos .home-screen-shell.home-layout-modern .home-modern-hero-card {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.legacy-webos .home-screen-shell.home-layout-modern .home-modern-hero-media {
+  top: 0;
+  right: -56px;
+  width: 74vw;
+  height: 62vh;
+  min-height: 520px;
+}
+
+.legacy-webos .home-screen-shell.home-layout-modern .home-modern-hero-media::before,
+.legacy-webos .home-screen-shell.home-layout-modern .home-modern-hero-media::after,
+.legacy-webos .home-screen-shell.home-layout-modern .home-modern-hero-media .home-hero-backdrop-wrap,
+.legacy-webos .home-screen-shell.home-layout-modern .home-modern-hero-media .home-hero-backdrop,
+.legacy-webos .home-screen-shell.home-layout-modern .home-hero-trailer-layer,
+.legacy-webos .home-screen-shell.home-layout-modern .home-hero-trailer-layer .home-inline-trailer-frame,
+.legacy-webos .home-screen-shell.home-layout-modern .home-hero-trailer-layer .home-inline-trailer-video {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.legacy-webos .home-screen-shell.home-layout-modern .home-modern-hero-copy {
+  left: 104px;
+  top: 40px;
+  right: 52px;
+  bottom: 60vh;
+  width: 640px;
+  max-width: 640px;
+  gap: 16px;
+}
+
+.legacy-webos .home-screen-shell.home-layout-modern .home-hero-logo {
+  width: 440px;
+  max-width: 440px;
+  height: 200px;
+  max-height: 200px;
+}
+
+.legacy-webos .home-screen-shell.home-layout-modern .home-hero-title-text {
+  max-width: 640px;
+  font-size: 76px;
+}
+
+.legacy-webos .home-screen-shell.home-layout-modern .home-modern-hero-meta-line,
+.legacy-webos .home-screen-shell.home-layout-modern .home-modern-hero-secondary,
+.legacy-webos .home-screen-shell.home-layout-modern .home-hero-description {
+  width: 560px;
+  max-width: 560px;
+}
+
+.legacy-webos .home-screen-shell.home-layout-modern .home-modern-hero-meta-line {
+  font-size: 21px;
+}
+
+.legacy-webos .home-screen-shell.home-layout-modern .home-modern-hero-secondary {
+  font-size: 18px;
+}
+
+.legacy-webos .home-screen-shell.home-layout-modern .home-hero-description {
+  font-size: 22px;
+}
+
 .legacy-webos #player,
 .legacy-webos #videoPlayer,
 .legacy-webos .player-ui-root {
@@ -12970,6 +13087,76 @@ button:focus-visible {
 }
 
 @supports not (font-size: clamp(1px, 2px, 3px)) {
+  .home-screen-shell.home-layout-modern .home-hero,
+  .home-screen-shell.home-layout-modern .home-modern-hero-card {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
+
+  .home-screen-shell.home-layout-modern .home-modern-hero-media {
+    top: 0;
+    right: -56px;
+    width: 74vw;
+    height: 62vh;
+    min-height: 520px;
+  }
+
+  .home-screen-shell.home-layout-modern .home-modern-hero-media::before,
+  .home-screen-shell.home-layout-modern .home-modern-hero-media::after,
+  .home-screen-shell.home-layout-modern .home-modern-hero-media .home-hero-backdrop-wrap,
+  .home-screen-shell.home-layout-modern .home-modern-hero-media .home-hero-backdrop,
+  .home-screen-shell.home-layout-modern .home-hero-trailer-layer,
+  .home-screen-shell.home-layout-modern .home-hero-trailer-layer .home-inline-trailer-frame,
+  .home-screen-shell.home-layout-modern .home-hero-trailer-layer .home-inline-trailer-video {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
+
+  .home-screen-shell.home-layout-modern .home-modern-hero-copy {
+    left: 104px;
+    top: 40px;
+    right: 52px;
+    bottom: 60vh;
+    width: 640px;
+    max-width: 640px;
+    gap: 16px;
+  }
+
+  .home-screen-shell.home-layout-modern .home-hero-logo {
+    width: 440px;
+    max-width: 440px;
+    height: 200px;
+    max-height: 200px;
+  }
+
+  .home-screen-shell.home-layout-modern .home-hero-title-text {
+    max-width: 640px;
+    font-size: 76px;
+  }
+
+  .home-screen-shell.home-layout-modern .home-modern-hero-meta-line,
+  .home-screen-shell.home-layout-modern .home-modern-hero-secondary,
+  .home-screen-shell.home-layout-modern .home-hero-description {
+    width: 560px;
+    max-width: 560px;
+  }
+
+  .home-screen-shell.home-layout-modern .home-modern-hero-meta-line {
+    font-size: 21px;
+  }
+
+  .home-screen-shell.home-layout-modern .home-modern-hero-secondary {
+    font-size: 18px;
+  }
+
+  .home-screen-shell.home-layout-modern .home-hero-description {
+    font-size: 22px;
+  }
+
   .player-controls-overlay {
     padding: 48px;
     box-sizing: border-box;
