@@ -129,6 +129,30 @@ npm run sync:tizen -- /absolute/path/to/YourTizenProject
 
 Package/install it with Tizen Studio or your normal Samsung TV workflow.
 
+For a local WGT directly from this repo without opening Tizen Studio:
+
+```bash
+npm run package:tizen
+```
+
+That creates `NuvioTV_VERSION.wgt` in the repo root. The package uses:
+
+- Tizen package id: `NuvioTV`
+- Tizen application id: `NuvioTV.NuvioTV`
+- bundled runtime env: your local `nuvio.env.js` copied by `npm run build`
+
+Override these when needed:
+
+```bash
+TIZEN_PACKAGE_ID=NuvioTV TIZEN_APP_ID=NuvioTV.NuvioTV npm run package:tizen
+```
+
+To package a different env file explicitly:
+
+```bash
+npm run package:tizen -- --env-source /absolute/path/to/nuvio.env.js
+```
+
 ### Sync Commands
 
 ```bash
