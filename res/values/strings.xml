@@ -213,12 +213,19 @@
     <string name="supporters_contributors_qr_hint">Point your camera at the QR code or use the button below.</string>
     <string name="supporters_contributors_back_button">Back to details</string>
     <string name="supporters_tab">Supporters</string>
+    <string name="sponsors_tab">Sponsors</string>
     <string name="contributors_tab">Contributors</string>
     <string name="supporters_loading">Loading supporters…</string>
     <string name="supporters_empty">No supporters found yet.</string>
     <string name="supporters_error_title">Couldn’t load supporters</string>
     <string name="supporters_no_message">No message shared.</string>
     <string name="supporters_open_donations">Open donations page</string>
+    <string name="sponsors_loading">Loading sponsors…</string>
+    <string name="sponsors_empty">No sponsors found yet.</string>
+    <string name="sponsors_error_title">Couldn’t load sponsors</string>
+    <string name="sponsors_detail_copy">Sponsors help move Nuvio forward through support across the different parts of development.</string>
+    <string name="sponsors_channel_unavailable">Sponsor channel unavailable.</string>
+    <string name="sponsors_open_channel">Open sponsor channel</string>
     <string name="contributors_loading">Loading GitHub contributors…</string>
     <string name="contributors_empty">No contributors found yet.</string>
     <string name="contributors_error_title">Couldn’t load contributors</string>
@@ -227,6 +234,17 @@
     <string name="contributors_show_kofi_qr">Show Ko-fi QR</string>
     <string name="contributors_hide_kofi_qr">Hide Ko-fi QR</string>
     <string name="contributors_profile_unavailable">GitHub profile link unavailable.</string>
+    <string name="supporters_error_load">Unable to load supporters.</string>
+    <string name="contributors_error_load">Unable to load contributors.</string>
+    <string name="sponsors_error_load">Unable to load sponsors.</string>
+    <string name="contributors_error_api_not_configured">Contributors API is not configured.</string>
+    <string name="contributors_error_api_http">Contributors API error</string>
+    <string name="supporters_error_api_http">Donations API error</string>
+    <string name="sponsors_error_api_http">Sponsors API error</string>
+    <string name="contributor_role_translator">Translator</string>
+    <string name="contributor_role_maintainer">Maintainer</string>
+    <string name="cd_donation_qr">Donation QR code</string>
+    <string name="cd_contributor_qr">Contributor QR code</string>
 
     <!-- PlaybackSettingsSections -->
     <string name="playback_section_general">General</string>

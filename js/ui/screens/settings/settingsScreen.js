@@ -56,7 +56,6 @@ const SETTINGS_VERSION_LABEL = formatSettingsVersionLabel(typeof __NUVIO_APP_VER
   ? __NUVIO_APP_VERSION__
   : "0.0.0");
 const PRIVACY_URL = "https://tapframe.github.io/NuvioStreaming/#privacy-policy";
-const SUPPORTERS_URL = "https://github.com/Tapframe/NuvioStreaming";
 
 const THEME_OPTIONS = [
   { id: "WHITE", labelKey: "settings.appearance.themes.white", color: "#f5f5f5", onColor: "#111111" },
@@ -785,7 +784,7 @@ export function scrollSettingsContentItem(node) {
     scrollSettingsNodeIntoContainer(node, horizontalContainer, "x");
   }
 
-  const verticalContainer = node.closest?.(".settings-content, .settings-group-card-fill, .settings-trakt-scroll-area");
+  const verticalContainer = node.closest?.(".settings-content, .settings-group-card-fill, .settings-trakt-scroll-area, .supporters-list");
   if (verticalContainer) {
     scrollSettingsNodeIntoContainer(node, verticalContainer, "y");
     return;
@@ -3395,9 +3394,7 @@ export const SettingsScreen = {
     this.actionMap.set("about:privacy", () => {
       window.open?.(PRIVACY_URL, "_blank");
     });
-    this.actionMap.set("about:supporters", () => {
-      window.open?.(SUPPORTERS_URL, "_blank");
-    });
+    this.actionMap.set("about:supporters", () => Router.navigate("supportersContributors"));
 
     return `
       ${this.renderSectionHeader(SECTION_META.find((item) => item.id === "about"))}
@@ -3810,6 +3807,11 @@ export const SettingsScreen = {
     target.classList.add("focused");
     focusSettingsNode(target);
 
+    if (String(target.dataset.focusKey || "") === "about:supporters") {
+      await Router.navigate("supportersContributors");
+      return;
+    }
+
     if (this.textDialog) {
       const field = target.closest?.("[data-text-dialog-role='field']");
       if (field) {
@@ -3874,6 +3876,11 @@ export const SettingsScreen = {
 
     const current = this.container.querySelector(".focusable.focused");
     if (!current) {
+      return;
+    }
+
+    if (String(current.dataset.focusKey || "") === "about:supporters") {
+      await Router.navigate("supportersContributors");
       return;
     }
 
