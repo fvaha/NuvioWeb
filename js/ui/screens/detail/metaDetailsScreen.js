@@ -1149,10 +1149,23 @@ export const MetaDetailsScreen = {
 
   async loadDetail() {
     const token = this.detailLoadToken;
-    const { itemId, itemType = "movie", fallbackTitle = "Untitled" } = this.params || {};
+    let { itemId, itemType = "movie", fallbackTitle = "Untitled" } = this.params || {};
     if (!itemId) {
       this.renderError("Item id mancante.");
       return;
+    }
+
+    const canonicalItemId = await this.resolveCanonicalDetailItemId(itemId, itemType);
+    if (token !== this.detailLoadToken) {
+      return;
+    }
+    if (canonicalItemId && canonicalItemId !== itemId) {
+      this.params = {
+        ...(this.params || {}),
+        itemId: canonicalItemId,
+        originalItemId: this.params?.originalItemId || itemId
+      };
+      itemId = canonicalItemId;
     }
 
     const metaPromise = withTimeout(
@@ -1265,6 +1278,29 @@ export const MetaDetailsScreen = {
     })().catch((error) => {
       console.warn("Detail background enrichment failed", error);
     });
+  },
+
+  async resolveCanonicalDetailItemId(itemId, itemType = "movie") {
+    const rawItemId = String(itemId || "").trim();
+    if (!/^tmdb:/i.test(rawItemId)) {
+      return rawItemId;
+    }
+    try {
+      const tmdbId = await TmdbService.ensureTmdbId(rawItemId, itemType);
+      if (!tmdbId) {
+        return rawItemId;
+      }
+      const enrichment = await TmdbMetadataService.fetchEnrichment({
+        tmdbId,
+        contentType: itemType,
+        language: TmdbSettingsStore.get().language
+      });
+      const imdbId = String(enrichment?.imdbId || "").trim();
+      return imdbId || rawItemId;
+    } catch (error) {
+      console.warn("Detail TMDB canonical id resolve failed", error);
+      return rawItemId;
+    }
   },
 
   async fetchMoreLikeThis(meta) {
@@ -3631,7 +3667,7 @@ export const MetaDetailsScreen = {
       if (!shell) {
         return;
       }
-      shell.classList.toggle("detail-scrolled", content.scrollTop > 200);
+      shell.classList.toggle("detail-scrolled", content.scrollTop > 160);
     };
     content.addEventListener("scroll", this.detailScrollHandler, { passive: true });
     if (this.detailFocusHandler) {
@@ -5373,6 +5409,39 @@ export const MetaDetailsScreen = {
       if (episodes.length) return this.focusInList(episodes, this.getRememberedEpisodeIndex(episodes));
       return false;
     };
+    const focusFirstSeriesSectionBelowHero = (index = 0) => {
+      if (insightTabs.length) {
+        return this.focusInList(insightTabs, this.getActiveInsightTabIndex(insightTabs));
+      }
+      if (this.seriesInsightTab === "ratings" && ratingSeasons.length) {
+        return this.focusInList(ratingSeasons, Math.min(index, ratingSeasons.length - 1));
+      }
+      if (castCards.length) {
+        return this.focusInList(castCards, Math.min(index, castCards.length - 1));
+      }
+      if (moreLikeCards.length) {
+        return this.focusInList(moreLikeCards, moreLikeRememberedIndex);
+      }
+      if (focusCommentsEntry(index)) {
+        return true;
+      }
+      if (companyCards[0]?.length) {
+        return this.focusInList(companyCards[0], rememberedCompanyIndex(0));
+      }
+      return false;
+    };
+    const focusSeriesSectionAboveInsights = (index = 0) => {
+      if (episodes.length) {
+        return this.focusInList(episodes, this.getRememberedEpisodeIndex(episodes));
+      }
+      if (seasons.length) {
+        return this.focusInList(seasons, Math.min(index, seasons.length - 1));
+      }
+      if (actions.length) {
+        return this.focusInList(actions, Math.min(index, actions.length - 1));
+      }
+      return false;
+    };
 
     if (typeof event.preventDefault === "function") {
       event.preventDefault();
@@ -5388,6 +5457,9 @@ export const MetaDetailsScreen = {
         }
         if (episodes.length) {
           return this.focusInList(episodes, this.getRememberedEpisodeIndex(episodes)) || true;
+        }
+        if (focusFirstSeriesSectionBelowHero(actionIndex)) {
+          return true;
         }
       }
       return true;
@@ -5405,6 +5477,9 @@ export const MetaDetailsScreen = {
       if (direction === "down") {
         if (episodes.length) {
           return this.focusInList(episodes, this.getRememberedEpisodeIndex(episodes)) || true;
+        }
+        if (focusFirstSeriesSectionBelowHero(seasonIndex)) {
+          return true;
         }
       }
       return true;
@@ -5447,8 +5522,8 @@ export const MetaDetailsScreen = {
       if (direction === "left") return this.focusInList(insightTabs, tabIndex - 1, { preserveVerticalScroll: true }) || true;
       if (direction === "right") return this.focusInList(insightTabs, tabIndex + 1, { preserveVerticalScroll: true }) || true;
       if (direction === "up") {
-        if (episodes.length) {
-          return this.focusInList(episodes, this.getRememberedEpisodeIndex(episodes)) || true;
+        if (focusSeriesSectionAboveInsights(tabIndex)) {
+          return true;
         }
       }
       if (direction === "down") {
