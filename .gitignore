@@ -1,19 +1,20 @@
 AGENTS.md
+
 nuvio.env.js
 node_modules/
+
 *.ipk
-*.wgt
-appinfo.json
+
 webOSTVjs-1.2.12/*
+
 # Build output
 dist/
 .cache/
 .pm2/
 logs/
 app.bundle.js
-NuvioWebTVInstaller
+
 NuvioTVWebOS/
 androidTV/
 ecosystem.config.cjs
 scripts/commit-build-poller.mjs
-node_modules/
