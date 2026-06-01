@@ -196,7 +196,17 @@ async function packageWebOs() {
 
   console.log("creating webOS IPK...");
   const aresPackage = resolveAresBinary("ares-package");
-  await runCommand(aresPackage, [appStageDir, serviceStageDir, "--outdir", rootDir]);
+  try {
+    await runCommand(aresPackage, [appStageDir, serviceStageDir, "--outdir", rootDir]);
+  } catch (error) {
+    const { version } = await readAppMetadata();
+    const expectedIpk = path.join(rootDir, `space.nuvio.webos_${version}_all.ipk`);
+    if (await pathExists(expectedIpk)) {
+      console.warn(`ares-package exited with an error, but ${expectedIpk} was created successfully. Continuing.`);
+    } else {
+      throw error;
+    }
+  }
 }
 
 try {
