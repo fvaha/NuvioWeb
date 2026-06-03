@@ -313,19 +313,6 @@ function normalizeAddonLogoUrl(value = "") {
   return String(value || "").trim();
 }
 
-function isImgurLogoUrl(value = "") {
-  const url = normalizeAddonLogoUrl(value);
-  if (!url) {
-    return false;
-  }
-  try {
-    const host = new URL(url, globalThis.location?.href || "https://nuvio.local/").hostname.toLowerCase();
-    return host === "i.imgur.com" || host === "imgur.com" || host.endsWith(".imgur.com");
-  } catch (_) {
-    return /(^|\/\/)(?:i\.)?imgur\.com\//i.test(url);
-  }
-}
-
 function hydrateAddonLogoCache() {
   if (addonLogoCacheHydrated) {
     return;
@@ -415,11 +402,30 @@ function requestAddonLogo(url = "", onSettled = null) {
       onSettled();
     }
   };
+  const finishDirect = () => {
+    addonLogoCache.set(normalized, {
+      status: "direct",
+      displayUrl: normalized,
+      updatedAt: Date.now()
+    });
+    if (typeof onSettled === "function") {
+      onSettled();
+    }
+  };
+  const loadDirect = () => {
+    const directImage = new Image();
+    directImage.decoding = "async";
+    try {
+      directImage.referrerPolicy = "no-referrer";
+    } catch (_) {
+      // Some TV browsers expose referrerPolicy as read-only.
+    }
+    directImage.onload = finishDirect;
+    directImage.onerror = fail;
+    directImage.src = normalized;
+  };
   const image = new Image();
-  const shouldTryDataCache = !isImgurLogoUrl(normalized);
-  if (shouldTryDataCache) {
-    image.crossOrigin = "anonymous";
-  }
+  image.crossOrigin = "anonymous";
   image.decoding = "async";
   try {
     image.referrerPolicy = "no-referrer";
@@ -427,17 +433,6 @@ function requestAddonLogo(url = "", onSettled = null) {
     // Some TV browsers expose referrerPolicy as read-only.
   }
   image.onload = () => {
-    if (!shouldTryDataCache) {
-      addonLogoCache.set(normalized, {
-        status: "direct",
-        displayUrl: normalized,
-        updatedAt: Date.now()
-      });
-      if (typeof onSettled === "function") {
-        onSettled();
-      }
-      return;
-    }
     try {
       const dataUrl = imageToDataUrl(image);
       addonLogoCache.set(normalized, {
@@ -447,14 +442,14 @@ function requestAddonLogo(url = "", onSettled = null) {
       });
       scheduleAddonLogoCachePersist();
     } catch (_) {
-      fail();
+      loadDirect();
       return;
     }
     if (typeof onSettled === "function") {
       onSettled();
     }
   };
-  image.onerror = fail;
+  image.onerror = loadDirect;
   image.src = normalized;
 }
 
@@ -1137,11 +1132,22 @@ export const StreamScreen = {
     const descriptionLines = getStreamDescriptionLines(stream);
     const addonLogoUrl = normalizeAddonLogoUrl(stream.addonLogo) || resolveAddonLogo(stream.addonName, this.addonLogoLookup);
     const cachedAddonLogoUrl = getCachedAddonLogoDisplayUrl(addonLogoUrl);
-    const displayAddonLogoUrl = cachedAddonLogoUrl || "";
+    let displayAddonLogoUrl = cachedAddonLogoUrl || "";
     if (addonLogoUrl && !displayAddonLogoUrl && !failedAddonLogoUrls.has(addonLogoUrl)) {
       requestAddonLogo(addonLogoUrl, () => this.requestRender());
     }
     const addonBadgeLabel = escapeHtml(getAddonBadgeLabel(stream.addonName || ""));
+    const isDirectRemoteLogo = displayAddonLogoUrl
+      && displayAddonLogoUrl === addonLogoUrl
+      && !displayAddonLogoUrl.startsWith("data:image/");
+    if (Environment.isWebOS() && isDirectRemoteLogo) {
+      this.renderedDirectAddonLogoUrls = this.renderedDirectAddonLogoUrls || new Set();
+      if (this.renderedDirectAddonLogoUrls.has(addonLogoUrl)) {
+        displayAddonLogoUrl = "";
+      } else {
+        this.renderedDirectAddonLogoUrls.add(addonLogoUrl);
+      }
+    }
     const meta = [
       renderMetaItem("peers", extractPeerCount(stream)),
       renderMetaItem("size", formatBytes(stream.behaviorHints?.videoSize)),
@@ -1149,7 +1155,7 @@ export const StreamScreen = {
     ].filter(Boolean).join("");
     const isResolving = this.resolvingStreamId === stream.id;
     const addonBadge = displayAddonLogoUrl
-      ? `<img src="${escapeHtml(displayAddonLogoUrl)}" alt="${escapeHtml(stream.addonName || "Addon")}" data-addon-logo="${escapeHtml(addonLogoUrl)}" decoding="async" /><span hidden>${addonBadgeLabel}</span>`
+      ? `<img src="${escapeHtml(displayAddonLogoUrl)}" alt="${escapeHtml(stream.addonName || "Addon")}" data-addon-logo="${escapeHtml(addonLogoUrl)}" decoding="async" loading="lazy" /><span hidden>${addonBadgeLabel}</span>`
       : `<span>${addonBadgeLabel}</span>`;
 
     return `
@@ -1202,7 +1208,9 @@ export const StreamScreen = {
 
     let body = "";
     if (filtered.length) {
+      this.renderedDirectAddonLogoUrls = new Set();
       body = filtered.map((stream, index) => this.renderStreamCard(stream, index)).join("");
+      this.renderedDirectAddonLogoUrls = null;
       if (hasPendingForFilter) {
         body += this.renderLoadingCards(1);
       }
