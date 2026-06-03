@@ -2833,9 +2833,18 @@ export const HomeScreen = {
     return Boolean(globalThis.document?.body?.classList?.contains("performance-constrained"));
   },
 
+  hasCollectionHomeRows() {
+    return Array.isArray(this.collections) && this.collections.length > 0;
+  },
+
   getRowItemLimit() {
     if (this.isLegacyTvRuntime()) {
       return HOME_MAX_ITEMS_PER_ROW_LEGACY_TV;
+    }
+    if (Platform.isWebOS() && this.hasCollectionHomeRows()) {
+      return this.collections.length > 2
+        ? HOME_MAX_ITEMS_PER_ROW_LEGACY_TV
+        : HOME_MAX_ITEMS_PER_ROW_CONSTRAINED;
     }
     return this.isPerformanceConstrained()
       ? HOME_MAX_ITEMS_PER_ROW_CONSTRAINED
@@ -2844,6 +2853,9 @@ export const HomeScreen = {
 
   getLoadingRowItemCount() {
     if (this.isLegacyTvRuntime()) {
+      return HOME_LOADING_ROW_ITEMS_LEGACY_TV;
+    }
+    if (Platform.isWebOS() && this.hasCollectionHomeRows()) {
       return HOME_LOADING_ROW_ITEMS_LEGACY_TV;
     }
     return this.isPerformanceConstrained()
@@ -2859,6 +2871,9 @@ export const HomeScreen = {
       return 5;
     }
     if (Platform.isWebOS()) {
+      if (this.hasCollectionHomeRows()) {
+        return 4;
+      }
       const webOsMajor = Number(Platform.getWebOsMajorVersion?.() || 0);
       if (webOsMajor > 0 && webOsMajor <= 5) {
         return 4;
@@ -2876,6 +2891,9 @@ export const HomeScreen = {
       return this.isLegacyTvRuntime() ? 2 : 4;
     }
     if (Platform.isWebOS()) {
+      if (this.hasCollectionHomeRows()) {
+        return 4;
+      }
       const webOsMajor = Number(Platform.getWebOsMajorVersion?.() || 0);
       if (webOsMajor > 0 && webOsMajor <= 5) {
         return 4;
@@ -2911,6 +2929,9 @@ export const HomeScreen = {
   },
 
   shouldProgressivelyRenderDeferredRows() {
+    if (Platform.isWebOS() && this.hasCollectionHomeRows()) {
+      return false;
+    }
     return !this.isPerformanceConstrained();
   },
 
@@ -6503,7 +6524,10 @@ export const HomeScreen = {
     const modernLandscapeLayoutClass = modernLandscapePostersEnabled
       ? " home-modern-landscape-posters"
       : "";
-    const layoutClass = `home-layout-${this.layoutMode}${modernLandscapeLayoutClass}`;
+    const modernSidebarLayoutClass = this.layoutPrefs?.modernSidebar
+      ? " home-modern-sidebar-enabled"
+      : "";
+    const layoutClass = `home-layout-${this.layoutMode}${modernLandscapeLayoutClass}${modernSidebarLayoutClass}`;
     const sizingStyle = this.layoutMode === "modern" ? buildModernHomeSizingStyle(this.layoutPrefs) : "";
     const showPosterLabels = this.layoutPrefs?.posterLabelsEnabled !== false;
     const showCatalogAddonName = this.layoutPrefs?.catalogAddonNameEnabled !== false;

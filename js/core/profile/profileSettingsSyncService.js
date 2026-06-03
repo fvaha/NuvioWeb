@@ -3,6 +3,7 @@ import { AuthManager } from "../auth/authManager.js";
 import { SupabaseApi } from "../../data/remote/supabase/supabaseApi.js";
 import { ThemeStore } from "../../data/local/themeStore.js";
 import { LayoutPreferences } from "../../data/local/layoutPreferences.js";
+import { HomeCatalogStore } from "../../data/local/homeCatalogStore.js";
 import { PlayerSettingsStore } from "../../data/local/playerSettingsStore.js";
 import { TmdbSettingsStore } from "../../data/local/tmdbSettingsStore.js";
 import { MdbListSettingsStore } from "../../data/local/mdbListSettingsStore.js";
@@ -65,6 +66,26 @@ function normalizeFeaturePayload(value) {
     }
     return accumulator;
   }, {});
+}
+
+function normalizeStringArray(value) {
+  if (Array.isArray(value)) {
+    return Array.from(new Set(value.map((entry) => String(entry || "").trim()).filter(Boolean)));
+  }
+  if (typeof value === "string") {
+    return Array.from(new Set(value.split(",").map((entry) => entry.trim()).filter(Boolean)));
+  }
+  return [];
+}
+
+function firstStringArrayFromRaw(raw = {}, keys = []) {
+  for (const key of keys) {
+    if (!Object.prototype.hasOwnProperty.call(raw, key)) {
+      continue;
+    }
+    return normalizeStringArray(raw[key]);
+  }
+  return null;
 }
 
 function normalizeBlob(blob = {}) {
@@ -629,6 +650,68 @@ const FEATURE_ADAPTERS = {
         return false;
       }
       LayoutPreferences.setForProfile(profileId, partial, { silentSync: true });
+      return true;
+    }
+  },
+  home_catalog_settings: {
+    export() {
+      const prefs = HomeCatalogStore.get();
+      return {
+        catalog_order_keys: prefs.order,
+        disabled_catalog_keys: prefs.disabled
+      };
+    },
+    project(rawFeature = {}) {
+      const raw = normalizeFeaturePayload(rawFeature);
+      const projected = {};
+      const order = firstStringArrayFromRaw(raw, [
+        "catalog_order_keys",
+        "home_catalog_order",
+        "catalog_order",
+        "order"
+      ]);
+      const disabled = firstStringArrayFromRaw(raw, [
+        "disabled_catalog_keys",
+        "hidden_catalog_keys",
+        "catalog_disabled_keys",
+        "home_catalog_disabled",
+        "disabled"
+      ]);
+      if (order) {
+        projected.catalog_order_keys = order;
+      }
+      if (disabled) {
+        projected.disabled_catalog_keys = disabled;
+      }
+      return projected;
+    },
+    import(profileId, rawFeature = {}) {
+      void profileId;
+      const raw = normalizeFeaturePayload(rawFeature);
+      const partial = {};
+      const order = firstStringArrayFromRaw(raw, [
+        "catalog_order_keys",
+        "home_catalog_order",
+        "catalog_order",
+        "order"
+      ]);
+      const disabled = firstStringArrayFromRaw(raw, [
+        "disabled_catalog_keys",
+        "hidden_catalog_keys",
+        "catalog_disabled_keys",
+        "home_catalog_disabled",
+        "disabled"
+      ]);
+      if (order) {
+        partial.order = order;
+      }
+      if (disabled) {
+        partial.disabled = disabled;
+      }
+      if (!Object.keys(partial).length) {
+        return false;
+      }
+      HomeCatalogStore.set(partial, { silentSync: true });
       return true;
     }
   },

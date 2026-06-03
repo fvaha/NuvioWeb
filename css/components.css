@@ -2032,6 +2032,10 @@ button:focus-visible {
   margin-left: 0;
 }
 
+.home-shell.home-modern-sidebar-enabled .home-main {
+  margin-left: 0;
+}
+
 .library-main {
   padding: 48px 96px 64px;
 }

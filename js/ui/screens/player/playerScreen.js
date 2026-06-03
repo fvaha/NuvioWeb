@@ -1406,6 +1406,7 @@ export const PlayerScreen = {
       PlayerController.play(this.activePlaybackUrl, this.buildPlaybackContext(sourceCandidate));
       this.loadManifestTrackDataForCurrentStream(this.activePlaybackUrl);
       this.startTrackDiscoveryWindow();
+      this.schedulePlaybackStallGuard();
     }
 
     if (!this.isExternalFrameMode()) {
@@ -2481,6 +2482,7 @@ export const PlayerScreen = {
     this.updateLoadingVisibility();
     this.enableStartupAudioGate();
     PlayerController.play(targetUrl, this.buildPlaybackContext(currentStreamCandidate));
+    this.schedulePlaybackStallGuard();
     this.setControlsVisible(true, { focus: false });
   },
 
@@ -5087,6 +5089,59 @@ export const PlayerScreen = {
 
   schedulePlaybackStallGuard() {
     this.clearPlaybackStallGuard();
+    if (this.isExternalFrameMode() || !this.activePlaybackUrl) {
+      return;
+    }
+    const startup = !this.hasPresentedPlaybackFrame;
+    const timeoutMs = this.getPlaybackStallTimeoutMs({ startup });
+    this.playbackStallTimer = setTimeout(() => {
+      this.playbackStallTimer = null;
+      if (this.isExternalFrameMode() || !this.loadingVisible || !this.activePlaybackUrl) {
+        return;
+      }
+
+      const readyState = typeof PlayerController.getPlaybackReadyState === "function"
+        ? Number(PlayerController.getPlaybackReadyState() || 0)
+        : Number(PlayerController.video?.readyState || 0);
+      if (readyState >= 3) {
+        this.loadingVisible = false;
+        this.updateLoadingVisibility();
+        this.updateUiTick();
+        return;
+      }
+
+      const targetEngine = typeof PlayerController.getAlternativePlaybackEngine === "function"
+        ? PlayerController.getAlternativePlaybackEngine(this.activePlaybackUrl)
+        : null;
+      if (targetEngine) {
+        console.warn("Playback stalled; switching player engine", {
+          url: this.activePlaybackUrl,
+          from: PlayerController.playbackEngine,
+          to: targetEngine
+        });
+        void this.playStreamByUrl(this.activePlaybackUrl, {
+          preservePlaybackState: true,
+          resetSilentAudioState: false,
+          forceEngine: targetEngine
+        });
+        return;
+      }
+
+      this.releaseStartupAudioGate({ resume: false });
+      this.loadingVisible = false;
+      this.paused = true;
+      this.dismissPauseOverlay();
+      this.updateLoadingVisibility();
+      this.updateMediaSessionPlaybackState();
+      this.setControlsVisible(true, { focus: false });
+      this.sourcesError = `${this.mediaErrorMessage(PlayerController.getLastPlaybackErrorCode?.() || 0)}. Choose another source manually.`;
+      if (this.streamCandidates.length > 1) {
+        this.openSourcesPanel();
+      } else {
+        this.renderSourcesPanel();
+      }
+      this.updateUiTick();
+    }, timeoutMs);
   },
 
   getSubtitleTabs() {
