@@ -4081,6 +4081,9 @@ export const PlayerScreen = {
       this.applySubtitlePresentationSettings();
       this.applyAspectMode({ showToast: false });
       this.updateUiTick();
+      // A mid-playback seek fires seeked/canplay but no "playing" event, so the
+      // seek-loading logo would linger. Tear the overlay down once playback settles.
+      this.scheduleLoadingCompletionCheck(250);
     };
 
     const onTrackListChanged = () => {
