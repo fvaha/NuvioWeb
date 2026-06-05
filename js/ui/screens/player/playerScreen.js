@@ -1,4 +1,5 @@
 import { PlayerController } from "../../../core/player/playerController.js";
+import { HostResolvers } from "../../../core/player/hostResolvers.js";
 import { localMediaTracksRepository } from "../../../data/repository/localMediaTracksRepository.js";
 import { subtitleRepository } from "../../../data/repository/subtitleRepository.js";
 import { streamRepository } from "../../../data/repository/streamRepository.js";
@@ -5351,6 +5352,25 @@ export const PlayerScreen = {
       this.streamCandidates = this.streamCandidates.map((entry) => (
         entry.id === streamCandidate.id ? { ...entry, ...streamCandidate } : entry
       ));
+    }
+    // Resolve file-host embed URLs (pixeldrain, streamtape, streamwish, doodstream,
+    // mixdrop...) to a direct playable link. Plugin providers sometimes hand back a
+    // host page the TV player can't open; resolve it on play, like BeeTV/CloudStream —
+    // no account, no debrid. No-op for direct m3u8/mp4.
+    if (HostResolvers.isResolvable(targetUrl)) {
+      const resolved = await HostResolvers.resolve(targetUrl);
+      if (resolved && resolved.url) {
+        targetUrl = resolved.url;
+        if (resolved.headers) {
+          const bh = streamCandidate.behaviorHints && typeof streamCandidate.behaviorHints === "object"
+            ? { ...streamCandidate.behaviorHints } : {};
+          const proxy = bh.proxyHeaders && typeof bh.proxyHeaders === "object" ? { ...bh.proxyHeaders } : {};
+          proxy.request = { ...(proxy.request || {}), ...resolved.headers };
+          bh.proxyHeaders = proxy;
+          streamCandidate.behaviorHints = bh;
+        }
+        streamCandidate.url = targetUrl;
+      }
     }
     await this.playStreamByUrl(targetUrl, options);
   },
