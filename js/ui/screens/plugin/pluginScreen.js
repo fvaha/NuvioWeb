@@ -64,8 +64,20 @@ export const PluginScreen = {
 
   async collectModel() {
     const addonUrls = addonRepository.getInstalledAddonUrls();
+    let addons = [];
+    try {
+      addons = (await addonRepository.getInstalledAddons({ includeDisabled: true }))
+        .map((addon) => ({
+          baseUrl: addon.baseUrl,
+          name: addon.displayName || addon.name || addon.baseUrl,
+          disabled: Boolean(addon.disabled)
+        }));
+    } catch (_) {
+      addons = [];
+    }
     return {
       addonCount: addonUrls.length,
+      addons,
       phoneManagerUrl: await getPhoneManagerUrl()
     };
   },
@@ -174,6 +186,31 @@ export const PluginScreen = {
       await this.closeQrOverlay();
     });
 
+    const addons = Array.isArray(this.model.addons) ? this.model.addons : [];
+    const addonRows = addons.map((addon, index) => {
+      const row = index + 1;
+      this.setRowColumns(row, [0]);
+      this.actionMap.set(`toggle_addon_${index}`, async () => {
+        addonRepository.setAddonDisabled(addon.baseUrl, !addon.disabled);
+        this.model = await this.collectModel();
+        await this.render({ refreshModel: false });
+      });
+      return `
+              <div role="button"
+                   class="addons-installed-card addons-focusable${addon.disabled ? " is-off" : ""}"
+                   data-zone="content"
+                   data-row="${row}"
+                   data-col="0"
+                   data-action-id="toggle_addon_${index}"
+                   tabindex="-1">
+                <span class="addons-installed-copy">
+                  <strong>${escapeHtml(addon.name)}</strong>
+                  <small>${escapeHtml(addon.baseUrl)}</small>
+                </span>
+                <span class="addons-installed-toggle${addon.disabled ? "" : " is-on"}">${addon.disabled ? "Off" : "On"}</span>
+              </div>`;
+    }).join("");
+
     this.container.innerHTML = `
       <div class="home-shell addons-shell${this.pluginRouteEnterPending ? " addons-route-enter" : ""}">
         ${renderRootSidebar({
@@ -208,6 +245,14 @@ export const PluginScreen = {
                 </span>
               </div>
             </section>
+            ${addons.length ? `
+            <section class="addons-installed-section">
+              <p class="addons-installed-title">Installed addons</p>
+              <div class="addons-installed-list">
+                ${addonRows}
+              </div>
+            </section>
+            ` : ""}
           </div>
         </main>
         ${this.qrOverlayOpen ? `

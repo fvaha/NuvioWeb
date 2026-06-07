@@ -69,6 +69,7 @@ export function renderModernHomeLayout({
     }
 
     const maxItems = Math.max(1, Number(rowItemLimit || 15));
+    const hasSeeAll = !isLoading && !isCollectionRow && items.length > maxItems;
     const visibleItems = rowItems.slice(0, maxItems);
     const rowTitle = isCollectionRow
       ? String(rowData.collectionTitle || rowData.collection?.title || "Collection")
@@ -92,6 +93,7 @@ export function renderModernHomeLayout({
         </div>
         <div class="home-track" data-track-row-key="${escapeHtml(rowKey)}">
           ${cardsMarkup}
+          ${hasSeeAll ? createSeeAllCardMarkup(seeAllId, rowData) : ""}
         </div>
       </section>
     `);

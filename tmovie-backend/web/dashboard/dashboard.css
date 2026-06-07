@@ -1,0 +1,141 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+}
+
+.top {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+    border-bottom: 1px solid #30363d;
+    flex-wrap: wrap;
+}
+
+.top h1 {
+    margin: 0 0 6px 0;
+    font-size: 22px;
+}
+
+.sub {
+    margin: 0;
+    color: #8b949e;
+    max-width: 52rem;
+    line-height: 1.4;
+}
+
+.links {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.links a {
+    color: #58a6ff;
+    text-decoration: none;
+}
+
+.links a:hover {
+    text-decoration: underline;
+}
+
+code {
+    background: #161b22;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid #30363d;
+}
+
+.panel {
+    padding: 16px 24px 8px 24px;
+    border-bottom: 1px solid #21262d;
+}
+
+.panel h2 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+}
+
+.badges {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.badges li {
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid #30363d;
+    font-size: 13px;
+    background: #161b22;
+}
+
+.badges li.ok {
+    border-color: #238636;
+    color: #3fb950;
+}
+
+.badges li.no {
+    border-color: #da3633;
+    color: #f85149;
+}
+
+.paths {
+    margin-top: 10px;
+    word-break: break-all;
+}
+
+.muted {
+    color: #8b949e;
+    font-size: 13px;
+}
+
+.row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.row input {
+    flex: 1;
+    min-width: 220px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    background: #161b22;
+    color: #e6edf3;
+}
+
+.row button {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    background: #21262d;
+    color: #e6edf3;
+    cursor: pointer;
+}
+
+.out {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 12px;
+    overflow: auto;
+    max-height: 320px;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.out.small {
+    max-height: 220px;
+}

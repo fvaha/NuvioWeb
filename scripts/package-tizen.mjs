@@ -75,8 +75,28 @@ function buildIndexHtml() {
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/components.css" />
   <link rel="stylesheet" href="css/themes.css" />
+  <style>
+    #boot-splash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100000;
+      background: #0d101e; transition: opacity 380ms ease; }
+    #boot-splash.boot-splash-hide { opacity: 0; pointer-events: none; }
+    #boot-splash .boot-splash-inner { position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); text-align: center; width: 100%; }
+    #boot-splash .boot-splash-logo { display: block; margin: 0 auto; width: 460px; height: auto; }
+    #boot-splash .boot-splash-spinner { width: 60px; height: 60px; margin: 40px auto 0; border-radius: 50%;
+      border: 5px solid rgba(255,255,255,0.14); border-top-color: #ffffff; animation: bootSplashSpin 0.9s linear infinite; }
+    #boot-splash .boot-splash-text { margin-top: 22px; color: rgba(233,240,248,0.66);
+      font-family: "Segoe UI", Arial, sans-serif; font-size: 24px; letter-spacing: 0.05em; }
+    @keyframes bootSplashSpin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
+  <div id="boot-splash">
+    <div class="boot-splash-inner">
+      <img class="boot-splash-logo" src="assets/images/nuviotv.png" alt="Nuvio" onerror="this.style.display='none'" />
+      <div class="boot-splash-spinner"></div>
+      <div class="boot-splash-text">Loading…</div>
+    </div>
+  </div>
   <script defer src="main.js"></script>
 </body>
 </html>

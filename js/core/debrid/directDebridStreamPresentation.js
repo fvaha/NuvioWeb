@@ -753,6 +753,52 @@ export const DebridStreamPresentation = {
     });
   },
 
+  // Filter/sort ALL streams (torrents + any addon links) by the user's playback
+  // settings, independent of debrid. Used so Samsung TV doesn't list sources it
+  // can't play (DV / HDR / 10-bit / object audio) and the list stays short.
+  // Conservative: only drops a stream when it AFFIRMATIVELY matches an excluded
+  // trait; unknown-quality streams are kept.
+  filterStreamsForPlayback(streams = [], settings = DebridSettingsStore.get()) {
+    if (!settings || !settings.applyFiltersToAllSources) {
+      return streams;
+    }
+    const minQuality = String(settings.streamMinimumQuality || "ANY").toUpperCase();
+    const allowedRes = minQuality === "P2160" ? ["P2160"]
+      : minQuality === "P1080" ? ["P2160", "P1440", "P1080"]
+        : minQuality === "P720" ? ["P2160", "P1440", "P1080", "P720"]
+          : null;
+    const dv = String(settings.streamDolbyVisionFilter || "ANY").toUpperCase();
+    const hdr = String(settings.streamHdrFilter || "ANY").toUpperCase();
+    const codec = String(settings.streamCodecFilter || "ANY").toUpperCase();
+    const audio = String(settings.streamAudioFilter || "ANY").toUpperCase();
+    const codecMap = { H264: "AVC", HEVC: "HEVC", AV1: "AV1" };
+    const objectAudio = ["ATMOS", "TRUEHD", "DTS_X", "DTS_HD_MA", "DTS_HD"];
+
+    const decorated = (streams || []).map((stream) => ({ stream, fact: facts(stream) }));
+    const kept = decorated.filter(({ fact }) => {
+      const res = fact.resolution;
+      if (allowedRes && res && res !== "UNKNOWN" && !allowedRes.includes(res)) return false;
+      if (dv === "EXCLUDE" && fact.hasDolbyVision) return false;
+      if (dv === "ONLY" && !fact.hasDolbyVision) return false;
+      const tenBit = (fact.visualTags || []).includes("TEN_BIT");
+      if (hdr === "EXCLUDE" && (fact.hasHdr || tenBit)) return false;
+      if (hdr === "ONLY" && !fact.hasHdr) return false;
+      if (codecMap[codec] && fact.codec && fact.codec !== "UNKNOWN" && fact.codec !== codecMap[codec]) return false;
+      if (audio === "EXCLUDE_HD" && (fact.audioTags || []).some((tag) => objectAudio.includes(tag))) return false;
+      return true;
+    });
+
+    let ordered = kept;
+    const sortMode = String(settings.streamSortMode || "DEFAULT").toUpperCase();
+    if (sortMode !== "DEFAULT") {
+      const effective = effectiveSettings(settings);
+      ordered = [...kept].sort((left, right) => compareStreams(left, right, effective));
+    }
+    const max = Number(settings.streamMaxResults ?? 0) || 0;
+    const limited = max > 0 ? ordered.slice(0, max) : ordered;
+    return limited.map((entry) => entry.stream);
+  },
+
   isManagedDebridStream,
   needsLocalDebridResolve
 

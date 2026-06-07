@@ -1,0 +1,10 @@
+/data/*.db
+/data/local_media_map.json
+/data/public/subtitles/*.srt
+/data/public/subtitles/*.gz
+/bin/
+/dist/
+dist/
+*.log
+.env
+.DS_Store

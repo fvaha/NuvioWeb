@@ -14,6 +14,9 @@ import { AnimeSkipSettingsStore } from "../../../data/local/animeSkipSettingsSto
 import { DEBRID_SETTINGS_DEFAULTS, DebridSettingsStore } from "../../../data/local/debridSettingsStore.js";
 import { DebridApi } from "../../../data/remote/api/debridApi.js";
 import { DebridProviders } from "../../../core/debrid/debridProviders.js";
+import { TMovieSettingsStore } from "../../../data/local/tmovieSettingsStore.js";
+import { TMovieApi } from "../../../data/remote/api/tmovieApi.js";
+import { TMovieDiscovery } from "../../../core/tmovie/tmovieDiscovery.js";
 import { ProfileManager } from "../../../core/profile/profileManager.js";
 import { ProfileSyncService } from "../../../core/profile/profileSyncService.js";
 import { LibrarySyncService } from "../../../core/profile/librarySyncService.js";
@@ -263,6 +266,11 @@ const DEBRID_CODEC_OPTIONS = [
   { id: "H264", labelKey: "settings.integration.debrid.codec.h264", label: "H.264 / AVC" },
   { id: "HEVC", labelKey: "settings.integration.debrid.codec.hevc", label: "HEVC / H.265" },
   { id: "AV1", labelKey: "settings.integration.debrid.codec.av1", label: "AV1" }
+];
+
+const DEBRID_AUDIO_FILTER_OPTIONS = [
+  { id: "ANY", labelKey: "settings.integration.debrid.audio.any", label: "Any audio" },
+  { id: "EXCLUDE_HD", labelKey: "settings.integration.debrid.audio.excludeHd", label: "Hide Atmos/TrueHD/DTS-HD" }
 ];
 
 const HOME_LAYOUT_OPTIONS = [
@@ -1329,6 +1337,7 @@ export const SettingsScreen = {
       mdbList: MdbListSettingsStore.get(),
       animeSkip: AnimeSkipSettingsStore.get(),
       debrid: DebridSettingsStore.get(),
+      tmovie: TMovieSettingsStore.get(),
       trakt: this.collectTraktModel(),
       rotatedDpad: Boolean(LocalStore.get(ROTATED_DPAD_KEY, true)),
       strictDpadGrid: Boolean(LocalStore.get(STRICT_DPAD_GRID_KEY, true)),
@@ -2437,6 +2446,10 @@ export const SettingsScreen = {
       this.integrationView = "animeskip";
       this.contentFocusKey = "integration:back";
     });
+    this.actionMap.set("integration:hub:tmovie", () => {
+      this.integrationView = "tmovie";
+      this.contentFocusKey = "integration:back";
+    });
 
     return `
         ${this.renderSectionHeader(SECTION_META.find((item) => item.id === "integration"))}
@@ -2462,6 +2475,11 @@ export const SettingsScreen = {
       title: t("settings.integration.animeskip.label"),
       subtitle: t("settings.integration.animeskip.subtitle")
     })}
+            ${this.renderActionRow({
+      focusKey: "integration:hub:tmovie",
+      title: t("settings.integration.tmovie.label", {}, "TMovie Server"),
+      subtitle: t("settings.integration.tmovie.subtitle", {}, "Self-hosted torrent streaming (debrid replacement)")
+    })}
           </div>
         </div>
     `;
@@ -2470,7 +2488,7 @@ export const SettingsScreen = {
   renderIntegrationDetail(model, key) {
     this.actionMap.set("integration:back", () => {
       this.integrationView = "hub";
-      this.contentFocusKey = key === "debrid" ? "integration:hub:debrid" : "integration:hub:tmdb";
+      this.contentFocusKey = `integration:hub:${key}`;
     });
 
     if (key === "debrid") {
@@ -2580,6 +2598,18 @@ export const SettingsScreen = {
           returnFocusKey: "integration:debrid:codec",
           onSelect: (option) => DebridSettingsStore.set({ streamCodecFilter: option.id })
         });
+      });
+      this.actionMap.set("integration:debrid:audio", () => {
+        this.openOptionDialog({
+          title: t("settings.integration.debrid.audio.title", {}, "Audio"),
+          options: DEBRID_AUDIO_FILTER_OPTIONS,
+          selectedId: model.debrid.streamAudioFilter,
+          returnFocusKey: "integration:debrid:audio",
+          onSelect: (option) => DebridSettingsStore.set({ streamAudioFilter: option.id })
+        });
+      });
+      this.actionMap.set("integration:debrid:applyAll", () => {
+        DebridSettingsStore.set({ applyFiltersToAllSources: !DebridSettingsStore.get().applyFiltersToAllSources });
       });
       this.actionMap.set("integration:debrid:streamBadges", () => {
         DebridSettingsStore.set({ streamBadgesEnabled: !DebridSettingsStore.get().streamBadgesEnabled });
@@ -2692,6 +2722,18 @@ export const SettingsScreen = {
         subtitle: t("settings.integration.debrid.codec.subtitle", {}, "Filter sources by video codec."),
         value: labelForOption(DEBRID_CODEC_OPTIONS, model.debrid.streamCodecFilter, "Any codec")
       })}
+            ${this.renderActionRow({
+        focusKey: "integration:debrid:audio",
+        title: t("settings.integration.debrid.audio.title", {}, "Audio"),
+        subtitle: t("settings.integration.debrid.audio.subtitle", {}, "Hide lossless/object audio (Atmos, TrueHD, DTS-HD) some TVs can't decode."),
+        value: labelForOption(DEBRID_AUDIO_FILTER_OPTIONS, model.debrid.streamAudioFilter, "Any audio")
+      })}
+            ${this.renderToggleRow({
+        focusKey: "integration:debrid:applyAll",
+        title: t("settings.integration.debrid.applyAll.title", {}, "Apply filters to all sources"),
+        subtitle: t("settings.integration.debrid.applyAll.subtitle", {}, "Also filter torrents and addon links (not just Debrid) so this TV only lists playable sources."),
+        checked: Boolean(model.debrid.applyFiltersToAllSources)
+      })}
             ${this.renderToggleRow({
         focusKey: "integration:debrid:streamBadges",
         title: t("settings.integration.debrid.streamBadges.title", {}, "Stream badges"),
@@ -2715,6 +2757,114 @@ export const SettingsScreen = {
         title: t("settings.integration.debrid.template.reset.title", {}, "Reset formatting"),
         subtitle: t("settings.integration.debrid.template.reset.subtitle", {}, "Restore default source formatting."),
         value: t("settings.integration.debrid.template.reset.value", {}, "Reset")
+      })}
+          </div>
+        </div>
+      `;
+    }
+
+    if (key === "tmovie") {
+      const tmovie = model.tmovie || TMovieSettingsStore.get();
+
+      const runTMovieScan = async () => {
+        this.tmovieScanning = true;
+        await this.render({ refreshModel: false });
+        let result = { ip: null, serverUrl: null };
+        try {
+          result = await TMovieDiscovery.discover();
+        } catch {
+          result = { ip: null, serverUrl: null };
+        }
+        this.tmovieScanning = false;
+        if (!result.serverUrl) {
+          window.alert?.(result.ip
+            ? t("settings.integration.tmovie.scan.none", {}, "No TMovie server found on your network.")
+            : t("settings.integration.tmovie.scan.noIp", {}, "Could not determine this device's network address."));
+          return;
+        }
+        // LAN-only server, no token: auto-pair on discovery.
+        TMovieSettingsStore.set({ serverUrl: result.serverUrl, paired: true, enabled: true });
+        window.alert?.(t("settings.integration.tmovie.scan.paired", { url: result.serverUrl }, `Found and paired: ${result.serverUrl}`));
+      };
+
+      this.actionMap.set("integration:tmovie:enabled", async () => {
+        const next = !TMovieSettingsStore.get().enabled;
+        TMovieSettingsStore.set({ enabled: next });
+        if (next && !TMovieSettingsStore.get().serverUrl) {
+          await runTMovieScan();
+        }
+      });
+      this.actionMap.set("integration:tmovie:scan", runTMovieScan);
+      this.actionMap.set("integration:tmovie:serverUrl", () => {
+        this.openTextDialog({
+          title: t("settings.integration.tmovie.serverUrl.prompt", {}, "TMovie server URL"),
+          value: TMovieSettingsStore.get().serverUrl,
+          placeholder: "http://192.168.x.x:8080",
+          returnFocusKey: "integration:tmovie:serverUrl",
+          onSubmit: (value) => {
+            const trimmed = String(value || "").trim().replace(/\/+$/, "");
+            TMovieSettingsStore.set({ serverUrl: trimmed, paired: false });
+            return true;
+          }
+        });
+      });
+      this.actionMap.set("integration:tmovie:pair", async () => {
+        const settings = TMovieSettingsStore.get();
+        if (!settings.serverUrl) {
+          window.alert?.(t("settings.integration.tmovie.pair.noUrl", {}, "Set the server URL first, or use Find server."));
+          return;
+        }
+        const status = await TMovieApi.getStatus(settings.serverUrl, settings.apiToken);
+        if (!status.ok || !status.installed) {
+          TMovieSettingsStore.set({ paired: false });
+          window.alert?.(t("settings.integration.tmovie.pair.unreachable", {}, "Server not reachable. Install it and check the URL."));
+          return;
+        }
+        TMovieSettingsStore.set({ paired: true });
+        window.alert?.(t("settings.integration.tmovie.pair.ok", {}, "Paired with TMovie server."));
+      });
+
+      const scanning = Boolean(this.tmovieScanning);
+      const statusValue = scanning
+        ? t("settings.integration.tmovie.status.scanning", {}, "Scanning…")
+        : tmovie.paired
+          ? t("settings.integration.tmovie.status.paired", {}, "Paired")
+          : t("settings.integration.tmovie.status.notPaired", {}, "Not paired");
+
+      return `
+        ${this.renderSectionHeader({ labelKey: "settings.integration.tmovie.label", subtitleKey: "settings.integration.tmovie.subtitle" })}
+        <div class="settings-group-card settings-group-card-fill">
+          <div class="settings-stack">
+            ${this.renderActionRow({
+        focusKey: "integration:back",
+        title: t("settings.integration.backToIntegrations.title"),
+        subtitle: t("settings.integration.backToIntegrations.subtitle"),
+        icon: "back"
+      })}
+            ${this.renderToggleRow({
+        focusKey: "integration:tmovie:enabled",
+        title: t("settings.integration.tmovie.enable.title", {}, "Stream torrents via TMovie"),
+        subtitle: t("settings.integration.tmovie.enable.subtitle", {}, "When a torrent source is selected, your TMovie server streams it while downloading."),
+        checked: Boolean(tmovie.enabled)
+      })}
+            ${this.renderActionRow({
+        focusKey: "integration:tmovie:scan",
+        title: t("settings.integration.tmovie.scan.title", {}, "Find server on my network"),
+        subtitle: t("settings.integration.tmovie.scan.subtitle", {}, "Auto-detect the TMovie server on this LAN and set it up."),
+        value: scanning ? t("settings.integration.tmovie.status.scanning", {}, "Scanning…") : t("settings.integration.tmovie.scan.action", {}, "Scan"),
+        disabled: scanning
+      })}
+            ${this.renderActionRow({
+        focusKey: "integration:tmovie:serverUrl",
+        title: t("settings.integration.tmovie.serverUrl.title", {}, "Server URL"),
+        subtitle: t("settings.integration.tmovie.serverUrl.subtitle", {}, "Address of your TMovie backend on the LAN."),
+        value: tmovie.serverUrl || t("settings.integration.tmovie.notSet", {}, "Not set")
+      })}
+            ${this.renderActionRow({
+        focusKey: "integration:tmovie:pair",
+        title: t("settings.integration.tmovie.pair.title", {}, "Pair / Test connection"),
+        subtitle: t("settings.integration.tmovie.pair.subtitle", {}, "Verify the server is installed and reachable."),
+        value: statusValue
       })}
           </div>
         </div>
@@ -3083,6 +3233,64 @@ export const SettingsScreen = {
       </div>
     `;
 
+    this.actionMap.set("playback:srcfilter:applyAll", () => {
+      DebridSettingsStore.set({ applyFiltersToAllSources: !DebridSettingsStore.get().applyFiltersToAllSources });
+    });
+    this.actionMap.set("playback:srcfilter:minQuality", () => {
+      this.openOptionDialog({
+        title: t("settings.integration.debrid.minQuality.title", {}, "Minimum quality"),
+        options: DEBRID_MIN_QUALITY_OPTIONS,
+        selectedId: model.debrid.streamMinimumQuality,
+        returnFocusKey: "playback:srcfilter:minQuality",
+        onSelect: (option) => DebridSettingsStore.set({ streamMinimumQuality: option.id })
+      });
+    });
+    this.actionMap.set("playback:srcfilter:dv", () => {
+      this.openOptionDialog({
+        title: t("settings.integration.debrid.dolbyVision.title", {}, "Dolby Vision"),
+        options: DEBRID_FEATURE_FILTER_OPTIONS,
+        selectedId: model.debrid.streamDolbyVisionFilter,
+        returnFocusKey: "playback:srcfilter:dv",
+        onSelect: (option) => DebridSettingsStore.set({ streamDolbyVisionFilter: option.id })
+      });
+    });
+    this.actionMap.set("playback:srcfilter:hdr", () => {
+      this.openOptionDialog({
+        title: t("settings.integration.debrid.hdr.title", {}, "HDR"),
+        options: DEBRID_FEATURE_FILTER_OPTIONS,
+        selectedId: model.debrid.streamHdrFilter,
+        returnFocusKey: "playback:srcfilter:hdr",
+        onSelect: (option) => DebridSettingsStore.set({ streamHdrFilter: option.id })
+      });
+    });
+    this.actionMap.set("playback:srcfilter:codec", () => {
+      this.openOptionDialog({
+        title: t("settings.integration.debrid.codec.title", {}, "Codec"),
+        options: DEBRID_CODEC_OPTIONS,
+        selectedId: model.debrid.streamCodecFilter,
+        returnFocusKey: "playback:srcfilter:codec",
+        onSelect: (option) => DebridSettingsStore.set({ streamCodecFilter: option.id })
+      });
+    });
+    this.actionMap.set("playback:srcfilter:audio", () => {
+      this.openOptionDialog({
+        title: t("settings.integration.debrid.audio.title", {}, "Audio"),
+        options: DEBRID_AUDIO_FILTER_OPTIONS,
+        selectedId: model.debrid.streamAudioFilter,
+        returnFocusKey: "playback:srcfilter:audio",
+        onSelect: (option) => DebridSettingsStore.set({ streamAudioFilter: option.id })
+      });
+    });
+    this.actionMap.set("playback:srcfilter:maxResults", () => {
+      this.openOptionDialog({
+        title: t("settings.integration.debrid.maxResults.title", {}, "Max results"),
+        options: DEBRID_MAX_RESULTS_OPTIONS,
+        selectedId: model.debrid.streamMaxResults,
+        returnFocusKey: "playback:srcfilter:maxResults",
+        onSelect: (option) => DebridSettingsStore.set({ streamMaxResults: Number(option.id || 0) })
+      });
+    });
+
     return `
       ${this.renderSectionHeader(SECTION_META.find((item) => item.id === "playback"))}
       <div class="settings-group-card settings-group-card-fill">
@@ -3107,6 +3315,43 @@ export const SettingsScreen = {
       subtitle: t("settings.playback.groups.subtitles.subtitle"),
       expanded: Boolean(expanded.subtitles),
       bodyHtml: subtitleBody
+    })}
+          <div class="settings-section-subhead">${escapeHtml(t("settings.playback.sourceFilters.title", {}, "Source filters"))}</div>
+          ${this.renderToggleRow({
+      focusKey: "playback:srcfilter:applyAll",
+      title: t("settings.playback.sourceFilters.enable.title", {}, "Filter sources for this device"),
+      subtitle: t("settings.playback.sourceFilters.enable.subtitle", {}, "Hide torrents and links this TV can't play (Dolby Vision, HDR/10-bit, lossless audio)."),
+      checked: Boolean(model.debrid.applyFiltersToAllSources)
+    })}
+          ${this.renderActionRow({
+      focusKey: "playback:srcfilter:minQuality",
+      title: t("settings.integration.debrid.minQuality.title", {}, "Minimum quality"),
+      value: labelForOption(DEBRID_MIN_QUALITY_OPTIONS, model.debrid.streamMinimumQuality, "Any quality")
+    })}
+          ${this.renderActionRow({
+      focusKey: "playback:srcfilter:dv",
+      title: t("settings.integration.debrid.dolbyVision.title", {}, "Dolby Vision"),
+      value: labelForOption(DEBRID_FEATURE_FILTER_OPTIONS, model.debrid.streamDolbyVisionFilter, "Any")
+    })}
+          ${this.renderActionRow({
+      focusKey: "playback:srcfilter:hdr",
+      title: t("settings.integration.debrid.hdr.title", {}, "HDR"),
+      value: labelForOption(DEBRID_FEATURE_FILTER_OPTIONS, model.debrid.streamHdrFilter, "Any")
+    })}
+          ${this.renderActionRow({
+      focusKey: "playback:srcfilter:codec",
+      title: t("settings.integration.debrid.codec.title", {}, "Codec"),
+      value: labelForOption(DEBRID_CODEC_OPTIONS, model.debrid.streamCodecFilter, "Any codec")
+    })}
+          ${this.renderActionRow({
+      focusKey: "playback:srcfilter:audio",
+      title: t("settings.integration.debrid.audio.title", {}, "Audio"),
+      value: labelForOption(DEBRID_AUDIO_FILTER_OPTIONS, model.debrid.streamAudioFilter, "Any audio")
+    })}
+          ${this.renderActionRow({
+      focusKey: "playback:srcfilter:maxResults",
+      title: t("settings.integration.debrid.maxResults.title", {}, "Max results"),
+      value: labelForOption(DEBRID_MAX_RESULTS_OPTIONS, model.debrid.streamMaxResults, "All streams")
     })}
         </div>
       </div>

@@ -114,6 +114,8 @@ class CatalogRepository {
       logo: meta.logo || null,
       description: meta.description || "",
       releaseInfo: meta.releaseInfo || "",
+      year: meta.year || meta.releaseInfo || "",
+      imdbRating: meta.imdbRating ?? meta.imdb_score ?? meta.ratings?.imdb ?? meta.mdbListRatings?.imdb ?? null,
       genres: Array.isArray(meta.genres) ? meta.genres : []
     };
   }

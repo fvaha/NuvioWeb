@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>TMovie backend</title>
+    <link rel="stylesheet" href="dashboard.css"/>
+</head>
+<body>
+<header class="top">
+    <div>
+        <h1>TMovie backend</h1>
+        <p class="sub">API-first: TV and mobile clients use <code>/api/v1</code>. This page is for status and quick checks.</p>
+    </div>
+    <nav class="links">
+        <a href="/api/v1/status" target="_blank" rel="noopener">status JSON</a>
+        <a href="/api/v1/health" target="_blank" rel="noopener">health</a>
+    </nav>
+</header>
+
+<section class="panel">
+    <h2>Integrations</h2>
+    <ul id="integrations" class="badges"></ul>
+    <p id="paths" class="paths muted"></p>
+</section>
+
+<section class="panel">
+    <h2>Quick search</h2>
+    <form id="search-form" class="row">
+        <input id="q" type="search" placeholder="Title..." autocomplete="off"/>
+        <button type="submit">Search</button>
+    </form>
+    <pre id="search-out" class="out"></pre>
+</section>
+
+<section class="panel">
+    <h2>Endpoints</h2>
+    <pre id="endpoints" class="out small"></pre>
+</section>
+
+<script src="dashboard.js"></script>
+</body>
+</html>

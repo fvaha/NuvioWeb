@@ -3,7 +3,9 @@ import { ScreenUtils } from "../../navigation/screen.js";
 import { streamRepository } from "../../../data/repository/streamRepository.js";
 import { DirectDebridResolver } from "../../../core/debrid/directDebridResolver.js";
 import { DirectDebridStreamPreparer } from "../../../core/debrid/directDebridStreamPreparer.js";
+import { DebridStreamPresentation } from "../../../core/debrid/directDebridStreamPresentation.js";
 import { DebridSettingsStore } from "../../../data/local/debridSettingsStore.js";
+import { TMovieResolver } from "../../../core/tmovie/tmovieResolver.js";
 import { LocalStore } from "../../../core/storage/localStore.js";
 import { LastSourceStore } from "../../../data/local/lastSourceStore.js";
 import { Environment } from "../../../platform/environment.js";
@@ -201,7 +203,8 @@ function flattenStreams(streamResult) {
         sourceType: stream.type || stream.source || "",
         raw: stream
       };
-      if (DirectDebridResolver.shouldListStream(entry)) {
+      if (DirectDebridResolver.shouldListStream(entry)
+        || (TMovieResolver.isEnabled() && TMovieResolver.canResolveStream(entry))) {
         flattened.push(entry);
       }
     });
@@ -1250,7 +1253,10 @@ export const StreamScreen = {
   },
 
   getFilteredStreams(filter = this.addonFilter) {
-    const orderedStreams = sortStreamsByAddonOrder(this.streams, this.sourceChips);
+    // Apply global playback filters (quality/codec/HDR/DV/audio) to ALL sources
+    // when enabled, so unplayable torrents/links are hidden on this device.
+    const playable = DebridStreamPresentation.filterStreamsForPlayback(this.streams, DebridSettingsStore.get());
+    const orderedStreams = sortStreamsByAddonOrder(playable, this.sourceChips);
     if (filter === "all") {
       return orderedStreams;
     }
@@ -1582,39 +1588,70 @@ export const StreamScreen = {
     }
     let targetUrl = selected.url || selected.externalUrl || "";
     if (!targetUrl) {
-      if (!DirectDebridResolver.canResolveStream(selected, {
-        season: this.params?.season == null ? null : Number(this.params.season),
-        episode: this.params?.episode == null ? null : Number(this.params.episode)
-      })) {
+      const resolveSeason = this.params?.season == null ? null : Number(this.params.season);
+      const resolveEpisode = this.params?.episode == null ? null : Number(this.params.episode);
+      // Prefer the self-hosted TMovie torrent resolver; fall back to debrid.
+      const useTMovie = TMovieResolver.isEnabled() && TMovieResolver.canResolveStream(selected);
+      const canDebrid = DirectDebridResolver.canResolveStream(selected, {
+        season: resolveSeason,
+        episode: resolveEpisode
+      });
+      if (!useTMovie && !canDebrid) {
         window.alert?.(t("stream.debrid.unavailable", {}, "This Debrid source needs a configured Debrid account."));
         return;
       }
       this.resolvingStreamId = selected.id;
       this.requestRender();
-      const result = await DirectDebridResolver.resolve(selected, {
-        season: this.params?.season == null ? null : Number(this.params.season),
-        episode: this.params?.episode == null ? null : Number(this.params.episode)
-      });
+      let resolvedUrl = "";
+      let resolvedBehaviorHints = selected.behaviorHints;
+      let resolvedRaw = selected.raw;
+      if (useTMovie) {
+        const tmovieResult = await TMovieResolver.resolve(selected, {
+          season: resolveSeason,
+          episode: resolveEpisode
+        });
+        if (tmovieResult.status === "success" && tmovieResult.stream?.url) {
+          resolvedUrl = tmovieResult.stream.url;
+          resolvedBehaviorHints = tmovieResult.stream.behaviorHints || selected.behaviorHints;
+          resolvedRaw = tmovieResult.stream.raw || selected.raw;
+        }
+      }
+      if (!resolvedUrl && canDebrid) {
+        const result = await DirectDebridResolver.resolve(selected, {
+          season: resolveSeason,
+          episode: resolveEpisode
+        });
+        if (result.status === "success" && result.stream?.url) {
+          resolvedUrl = result.stream.url;
+          resolvedBehaviorHints = result.stream.behaviorHints || selected.behaviorHints;
+          resolvedRaw = result.stream.raw || selected.raw;
+        } else {
+          this.resolvingStreamId = null;
+          this.requestRender();
+          const messageKey = result.status === "not_cached"
+            ? "stream.debrid.notCached"
+            : result.status === "stale"
+                ? "stream.debrid.stale"
+                : "stream.debrid.failed";
+          const fallback = result.status === "not_cached"
+            ? "Not cached on this service."
+            : result.status === "stale"
+                ? "This Debrid result expired. Refreshing streams."
+                : "Could not resolve this Debrid stream.";
+          window.alert?.(t(messageKey, {}, fallback));
+          return;
+        }
+      }
       this.resolvingStreamId = null;
-      if (result.status !== "success" || !result.stream?.url) {
+      if (!resolvedUrl) {
         this.requestRender();
-        const messageKey = result.status === "not_cached"
-          ? "stream.debrid.notCached"
-          : result.status === "stale"
-              ? "stream.debrid.stale"
-              : "stream.debrid.failed";
-        const fallback = result.status === "not_cached"
-          ? "Not cached on this service."
-          : result.status === "stale"
-              ? "This Debrid result expired. Refreshing streams."
-              : "Could not resolve this Debrid stream.";
-        window.alert?.(t(messageKey, {}, fallback));
+        window.alert?.(t("stream.tmovie.failed", {}, "Could not stream this torrent via the TMovie server."));
         return;
       }
-      selected.url = result.stream.url;
+      selected.url = resolvedUrl;
       selected.externalUrl = null;
-      selected.behaviorHints = result.stream.behaviorHints || selected.behaviorHints;
-      selected.raw = result.stream.raw || selected.raw;
+      selected.behaviorHints = resolvedBehaviorHints;
+      selected.raw = resolvedRaw;
       this.streams = this.streams.map((stream) => stream.id === selected.id ? { ...stream, ...selected } : stream);
       targetUrl = selected.url || selected.externalUrl || "";
       this.requestRender();

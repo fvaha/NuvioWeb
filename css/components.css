@@ -9132,6 +9132,87 @@ button:focus-visible {
   color: var(--addons-error);
 }
 
+.addons-installed-section {
+  width: 100%;
+  margin-top: 40px;
+}
+
+.addons-installed-title {
+  margin: 0 0 14px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.addons-installed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.addons-installed-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  border-radius: 22px;
+  border: 1px solid transparent;
+  background: var(--addons-card, rgba(255, 255, 255, 0.06));
+  color: var(--addons-text, #fff);
+  text-align: left;
+}
+
+.addons-installed-card.is-off {
+  opacity: 0.55;
+}
+
+.addons-installed-card.focused {
+  border-color: var(--focus-color);
+  box-shadow: 0 0 0 2px rgb(var(--focus-color-rgb) / 0.55);
+}
+
+.addons-installed-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.addons-installed-copy strong {
+  font-size: 22px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addons-installed-copy small {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addons-installed-toggle {
+  flex: 0 0 auto;
+  min-width: 74px;
+  text-align: center;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.addons-installed-toggle.is-on {
+  background: #2ecc71;
+  color: #06231a;
+}
+
 .addons-large-row {
   width: 100%;
   min-height: 144px;
@@ -9811,8 +9892,34 @@ button:focus-visible {
   color: rgba(242, 247, 254, 0.9);
 }
 
+.player-loading-progress {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.player-loading-spinner {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.16);
+  border-top-color: rgba(255, 255, 255, 0.92);
+  animation: playerLoadingSpin 0.9s linear infinite;
+}
+
+.player-loading-overlay.logo-only .player-loading-spinner {
+  display: none;
+}
+
+@keyframes playerLoadingSpin {
+  to { transform: rotate(360deg); }
+}
+
 .player-loading-status {
-  margin-top: 18px;
+  margin: 0;
   font-size: clamp(18px, 1.1vw, 24px);
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -10760,18 +10867,102 @@ button:focus-visible {
 }
 
 .player-subtitle-modal .player-dialog-item.focused {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(226, 232, 240, 0.16);
+  border-color: var(--focus-color);
+  background: rgb(var(--focus-color-rgb) / 0.18);
+  box-shadow: 0 0 0 2px rgb(var(--focus-color-rgb) / 0.55);
 }
 
 .player-subtitle-modal .player-dialog-item.selected {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .player-subtitle-modal .player-dialog-item.selected.focused {
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(226, 232, 240, 0.18);
+  border-color: var(--focus-color);
+  background: rgb(var(--focus-color-rgb) / 0.2);
+  box-shadow: 0 0 0 2px rgb(var(--focus-color-rgb) / 0.6);
+}
+
+/* Subtitle language picker: small muted track-count badge on the right. */
+.player-subtitle-lang-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(248, 251, 255, 0.78);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Subtitle options: bigger cards, full release name wraps to two lines. */
+.player-subtitle-options-rail .player-dialog-item {
+  min-height: 76px;
+  padding: 12px 14px;
+}
+
+.player-subtitle-loadmore {
+  justify-items: center;
+  text-align: center;
+  border: 1px dashed rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.player-subtitle-loadmore .player-dialog-item-main {
+  grid-column: 1 / -1;
+  color: rgba(248, 251, 255, 0.86);
+  font-weight: 700;
+}
+
+.player-subtitle-options-rail .player-dialog-item-main {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.2;
+}
+
+.player-subtitle-options-rail .player-dialog-item-sub {
+  white-space: normal;
+}
+
+/* Subtitle Style: Text/Outline color shown as a row of selectable swatches. */
+.player-dialog-item.player-subtitle-color-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  row-gap: 10px;
+  grid-template-columns: none;
+}
+
+.player-subtitle-swatches {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.player-subtitle-swatch {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  transition: box-shadow 120ms ease, transform 120ms ease;
+}
+
+.player-subtitle-swatch.selected {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.player-subtitle-color-item.focused .player-subtitle-swatch.selected {
+  box-shadow: 0 0 0 3px var(--focus-color), inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transform: scale(1.1);
 }
 
 .player-dialog-item.disabled {
@@ -15401,8 +15592,39 @@ button:focus-visible {
   display: none;
 }
 
+
 .seeall-header {
   margin-bottom: 24px;
+}
+
+.seeall-sortbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.seeall-sort-chip {
+  margin-right: 14px;
+  padding: 9px 22px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.seeall-sort-chip.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.seeall-sort-chip.focused {
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 2px var(--secondary-color);
+  color: #fff;
 }
 
 .seeall-title {
@@ -15421,9 +15643,10 @@ button:focus-visible {
 
 .seeall-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  grid-template-columns: repeat(auto-fill, 248px);
   gap: 20px 16px;
   align-items: start;
+  justify-content: center;
 }
 
 .seeall-card {
@@ -15443,6 +15666,7 @@ button:focus-visible {
 }
 
 .seeall-card-poster-wrap {
+  position: relative;
   width: 100%;
   height: 372px;
   border: 2px solid transparent;
@@ -15451,6 +15675,30 @@ button:focus-visible {
   background: var(--card-bg);
   margin-bottom: 8px;
   transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.seeall-card-rating {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.78);
+}
+
+.seeall-card-rating-logo {
+  height: 14px;
+  width: auto;
+  display: block;
+  margin-right: 9px;
+}
+
+.seeall-card-rating-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f5c518;
 }
 .seeall-card.focused .seeall-card-poster-wrap {
   border-color: var(--secondary-color);
@@ -15489,11 +15737,15 @@ button:focus-visible {
 }
 
 .seeall-card-year {
-  width: 100%;
-  margin-top: 4px;
-  padding: 0 2px;
-  font-size: 20px;
-  color: var(--text-secondary);
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.78);
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
 }
 
 .seeall-card.focused .seeall-card-title {

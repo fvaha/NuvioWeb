@@ -6154,6 +6154,7 @@ export const HomeScreen = {
     if (this.hasLoadedOnce && Array.isArray(this.rows) && this.rows.length) {
       this.homeLoadToken = (this.homeLoadToken || 0) + 1;
       this.render();
+      try { window.__nuvioHideSplash?.(); } catch (_) { /* ignore */ }
       this.loadData({ background: true }).catch((error) => {
         console.warn("Home background refresh failed", error);
       });
@@ -6320,6 +6321,8 @@ export const HomeScreen = {
     this.isInitialHomeLoading = false;
     this.hasLoadedOnce = true;
     this.render();
+    // Home rows (repos/catalogs) are ready — dismiss the fullscreen boot splash.
+    try { window.__nuvioHideSplash?.(); } catch (_) { /* ignore */ }
     const previousSidebarProfileSignature = buildSidebarProfileSignature(this.sidebarProfile);
     sidebarProfilePromise.then((profile) => {
       if (token !== this.homeLoadToken || Router.getCurrent() !== "home") {
@@ -6725,7 +6728,9 @@ export const HomeScreen = {
     let modernLayoutPayload = null;
 
     if (this.isInitialHomeLoading) {
-      mainContentMarkup = renderHomeLoadingState();
+      // While the fullscreen boot splash is still up it IS the loading screen, so
+      // don't render the home's own spinner underneath (avoids double loading).
+      mainContentMarkup = document.getElementById("boot-splash") ? "" : renderHomeLoadingState();
       this.catalogSeeAllMap = new Map();
     } else if (this.layoutMode === "modern") {
       modernLayoutPayload = renderModernHomeLayout({

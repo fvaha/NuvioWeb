@@ -12,6 +12,13 @@ import {
 
 const POSTER_HOLD_DELAY_MS = 650;
 
+const SORT_OPTIONS = [
+  { id: "default", label: "Default" },
+  { id: "rating", label: "Rating" },
+  { id: "newest", label: "Newest" },
+  { id: "oldest", label: "Oldest" }
+];
+
 function isBackEvent(event) {
   return Environment.isBackEvent(event);
 }
@@ -46,6 +53,20 @@ function extractReleaseYear(item = {}) {
   }
 
   return "";
+}
+
+function formatImdbBadge(item = {}) {
+  const raw = item?.imdbRating ?? item?.imdb_score ?? item?.ratings?.imdb ?? null;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) {
+    return "";
+  }
+  return `
+    <div class="seeall-card-rating">
+      <img class="seeall-card-rating-logo" src="assets/icons/imdb_logo_2016.svg" alt="IMDb" />
+      <span class="seeall-card-rating-value">${value.toFixed(1)}</span>
+    </div>
+  `;
 }
 
 function groupNodesByOffsetTop(nodes = []) {
@@ -168,6 +189,8 @@ export const CatalogSeeAllScreen = {
     this.items = Array.isArray(params?.initialItems) ? [...params.initialItems] : [];
     this.nextSkip = this.items.length ? 100 : 0;
     this.layoutPrefs = LayoutPreferences.get();
+    this.sortMode = "default";
+    this.pendingSortChipFocus = false;
     this.loading = false;
     this.hasMore = true;
     this.lastFocusedKey = this.items[0]?.id ? `item:${this.items[0].id}` : null;
@@ -384,6 +407,12 @@ export const CatalogSeeAllScreen = {
       const targetRowNodes = nav.rows[row + delta] || null;
       if (!targetRowNodes?.length) {
         if (direction === "up" && row === 0) {
+          const chip = this.container?.querySelector(".seeall-sort-chip.active")
+            || this.container?.querySelector(".seeall-sort-chip");
+          if (chip) {
+            this.focusChip(chip);
+            return true;
+          }
           const shell = this.container?.querySelector(".seeall-shell") || null;
           this.savedScrollTop = setContainerScrollTop(shell, 0, "smooth");
         }
@@ -538,8 +567,9 @@ export const CatalogSeeAllScreen = {
   render() {
     const descriptor = this.params || {};
     const title = descriptor.catalogName || "Catalog";
-    const cards = this.items.length
-      ? this.items.map((item, index) => `
+    const sortedItems = this.getSortedItems();
+    const cards = sortedItems.length
+      ? sortedItems.map((item, index) => `
           <article class="seeall-card focusable"
                    data-action="openDetail"
                    data-item-id="${item.id || ""}"
@@ -552,12 +582,10 @@ export const CatalogSeeAllScreen = {
             <div class="seeall-card-poster-wrap">
               ${item.poster
                 ? `<img class="seeall-card-poster-image" src="${escapeHtml(item.poster)}" alt="${escapeHtml(item.name || "content")}" loading="lazy" decoding="async" />`
-                : `<div class="seeall-card-poster placeholder"></div>`}
+                : `<div class="seeall-card-poster placeholder">${escapeHtml(item.name || "")}</div>`}
+              ${extractReleaseYear(item) ? `<div class="seeall-card-year">${escapeHtml(extractReleaseYear(item))}</div>` : ""}
+              ${formatImdbBadge(item)}
             </div>
-            ${this.layoutPrefs?.posterLabelsEnabled !== false ? `
-              <div class="seeall-card-title">${escapeHtml(item.name || "Untitled")}</div>
-              <div class="seeall-card-year">${escapeHtml(extractReleaseYear(item))}</div>
-            ` : ""}
           </article>
         `).join("")
       : `<div class="seeall-empty">${escapeHtml(t("catalog_see_all_empty_title", {}, "No items available"))}</div>`;
@@ -570,6 +598,9 @@ export const CatalogSeeAllScreen = {
             ? `<div class="seeall-subtitle">${escapeHtml(t("catalog_see_all_from", [descriptor.addonName], "from %1$s"))}</div>`
             : ""}
         </header>
+        <div class="seeall-sortbar">
+          ${SORT_OPTIONS.map((opt) => `<button class="seeall-sort-chip focusable${this.sortMode === opt.id ? " active" : ""}" data-action="setSort" data-sort="${opt.id}" data-focus-key="sort:${opt.id}">${escapeHtml(opt.label)}</button>`).join("")}
+        </div>
         <section class="seeall-grid">
           ${cards}
         </section>
@@ -581,6 +612,16 @@ export const CatalogSeeAllScreen = {
     this.buildNavigationModel();
     this.bindCardEvents();
     this.bindShellEvents();
+    this.bindSortbar();
+    if (this.pendingSortChipFocus) {
+      this.pendingSortChipFocus = false;
+      const chip = this.container?.querySelector(`.seeall-sort-chip[data-sort="${this.sortMode}"]`)
+        || this.container?.querySelector(".seeall-sort-chip");
+      if (chip) {
+        this.focusChip(chip);
+        return;
+      }
+    }
     if (this.pendingRestoreFocus) {
       const scrollMode = this.preserveViewportOnNextRender ? "none" : "center";
       this.pendingRestoreFocus = false;
@@ -588,7 +629,94 @@ export const CatalogSeeAllScreen = {
       this.restoreFocusedCard({ scrollMode });
       return;
     }
-    ScreenUtils.setInitialFocus(this.container);
+    // Start focus on the first poster.
+    const firstCard = this.container?.querySelector(".seeall-card.focusable") || null;
+    if (firstCard) {
+      this.focusNode(firstCard);
+    } else {
+      ScreenUtils.setInitialFocus(this.container);
+    }
+  },
+
+  getSortedItems() {
+    const items = Array.isArray(this.items) ? [...this.items] : [];
+    const yearOf = (it) => {
+      const y = parseInt(extractReleaseYear(it), 10);
+      return Number.isFinite(y) ? y : 0;
+    };
+    const rateOf = (it) => {
+      const r = Number(it?.imdbRating ?? it?.imdb_score ?? it?.ratings?.imdb);
+      return Number.isFinite(r) ? r : -1;
+    };
+    switch (this.sortMode) {
+      case "rating":
+        return items.sort((a, b) => rateOf(b) - rateOf(a));
+      case "newest":
+        return items.sort((a, b) => yearOf(b) - yearOf(a));
+      case "oldest":
+        return items.sort((a, b) => (yearOf(a) || 99999) - (yearOf(b) || 99999));
+      default:
+        return items;
+    }
+  },
+
+  setSort(mode) {
+    if (!SORT_OPTIONS.some((opt) => opt.id === mode) || mode === this.sortMode) {
+      this.pendingSortChipFocus = true;
+      this.render();
+      return;
+    }
+    this.sortMode = mode;
+    this.lastFocusedKey = null;
+    this.pendingSortChipFocus = true;
+    const shell = this.container?.querySelector(".seeall-shell") || null;
+    if (shell) {
+      shell.scrollTop = 0;
+    }
+    this.render();
+  },
+
+  focusChip(node) {
+    if (!node) {
+      return false;
+    }
+    this.container?.querySelectorAll(".focusable.focused").forEach((el) => el.classList.remove("focused"));
+    node.classList.add("focused");
+    focusWithoutAutoScroll(node);
+    const shell = this.container?.querySelector(".seeall-shell") || null;
+    if (shell) {
+      shell.scrollTop = 0;
+    }
+    return true;
+  },
+
+  bindSortbar() {
+    this.container?.querySelectorAll(".seeall-sort-chip").forEach((node) => {
+      node.onclick = (event) => {
+        event?.preventDefault?.();
+        this.setSort(String(node.dataset.sort || "default"));
+      };
+    });
+  },
+
+  handleSortbarKey(event, node) {
+    const code = Number(event?.keyCode || 0);
+    const chips = Array.from(this.container?.querySelectorAll(".seeall-sort-chip") || []);
+    const idx = chips.indexOf(node);
+    event?.preventDefault?.();
+    if (code === 37) {
+      this.focusChip(chips[idx - 1] || node);
+    } else if (code === 39) {
+      this.focusChip(chips[idx + 1] || node);
+    } else if (code === 40) {
+      const card = this.container?.querySelector(".seeall-card.focusable") || null;
+      if (card) {
+        this.focusNode(card);
+      }
+    } else if (code === 13) {
+      this.setSort(String(node.dataset.sort || "default"));
+    }
+    return true;
   },
 
   bindCardEvents() {
@@ -630,6 +758,10 @@ export const CatalogSeeAllScreen = {
     }
     const code = Number(event?.keyCode || 0);
     const focusedBeforeDpad = this.container?.querySelector(".focusable.focused") || null;
+    if (focusedBeforeDpad?.classList?.contains("seeall-sort-chip")) {
+      this.handleSortbarKey(event, focusedBeforeDpad);
+      return;
+    }
     if (code === 13 && this.isPosterHoldTarget(focusedBeforeDpad)) {
       event?.preventDefault?.();
       if (!event?.repeat && !this.hasPendingPosterHold(focusedBeforeDpad)) {

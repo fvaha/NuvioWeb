@@ -4,6 +4,7 @@ import { AddonApi } from "../remote/api/addonApi.js";
 
 const ADDON_URLS_KEY = "installedAddonUrls";
 const ADDON_DISPLAY_NAMES_KEY = "installedAddonDisplayNames";
+const ADDON_DISABLED_KEY = "disabledAddonUrls";
 const MANIFEST_SUFFIX = "/manifest.json";
 const DEFAULT_ADDON_URLS = [
   "https://v3-cinemeta.strem.io",
@@ -197,21 +198,57 @@ class AddonRepository {
     return this.applyDisplayNames(addons);
   }
 
+  getDisabledAddonUrls() {
+    const value = LocalStore.get(ADDON_DISABLED_KEY, []);
+    return Array.isArray(value) ? value.map((url) => this.canonicalizeUrl(url)).filter(Boolean) : [];
+  }
+
+  isAddonDisabled(url) {
+    return this.getDisabledAddonUrls().includes(this.canonicalizeUrl(url));
+  }
+
+  setAddonDisabled(url, disabled) {
+    const clean = this.canonicalizeUrl(url);
+    if (!clean) {
+      return;
+    }
+    const set = new Set(this.getDisabledAddonUrls());
+    if (disabled) {
+      set.add(clean);
+    } else {
+      set.delete(clean);
+    }
+    LocalStore.set(ADDON_DISABLED_KEY, Array.from(set));
+    this.notifyAddonsChanged("addon-disabled-toggle");
+  }
+
+  // Attach a `disabled` flag and, unless includeDisabled, drop disabled addons so
+  // every consumer (catalogs, streams, subtitles) automatically skips off addons.
+  finalizeInstalledAddons(list, includeDisabled) {
+    const disabled = this.getDisabledAddonUrls();
+    const flagged = list.map((addon) => ({
+      ...addon,
+      disabled: disabled.includes(this.canonicalizeUrl(addon.baseUrl))
+    }));
+    return includeDisabled ? flagged : flagged.filter((addon) => !addon.disabled);
+  }
+
   async getInstalledAddons(options = {}) {
     const urls = this.getInstalledAddonUrls();
     const cacheKey = JSON.stringify(urls);
     const force = Boolean(options?.force);
     const cacheOnly = Boolean(options?.cacheOnly);
+    const includeDisabled = Boolean(options?.includeDisabled);
     if (!force && this.installedAddonsCache && this.installedAddonsCacheKey === cacheKey) {
-      return [...this.installedAddonsCache];
+      return this.finalizeInstalledAddons(this.installedAddonsCache, includeDisabled);
     }
 
     if (cacheOnly) {
-      return this.getCachedInstalledAddons(urls);
+      return this.finalizeInstalledAddons(this.getCachedInstalledAddons(urls), includeDisabled);
     }
 
     if (!force && this.installedAddonsPromise && this.installedAddonsPromiseKey === cacheKey) {
-      return this.installedAddonsPromise;
+      return this.finalizeInstalledAddons(await this.installedAddonsPromise, includeDisabled);
     }
 
     const request = (async () => {
@@ -235,7 +272,7 @@ class AddonRepository {
     this.installedAddonsPromise = request;
     this.installedAddonsPromiseKey = cacheKey;
     try {
-      return await request;
+      return this.finalizeInstalledAddons(await request, includeDisabled);
     } finally {
       if (this.installedAddonsPromise === request) {
         this.installedAddonsPromise = null;

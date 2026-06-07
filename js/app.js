@@ -28,6 +28,9 @@ import { renderAppShell } from "./bootstrap/renderAppShell.js";
 import { renderAddonRemotePage } from "./bootstrap/renderAddonRemotePage.js";
 import { warmStreamingLibs } from "./runtime/loadStreamingLibs.js";
 import { PluginManager } from "./core/player/pluginManager.js";
+import { TMovieSettingsStore } from "./data/local/tmovieSettingsStore.js";
+import { TMovieApi } from "./data/remote/api/tmovieApi.js";
+import { TMovieDiscovery } from "./core/tmovie/tmovieDiscovery.js";
 import { Platform } from "./platform/index.js";
 import { LocalStore } from "./core/storage/localStore.js";
 import { I18n } from "./i18n/index.js";
@@ -174,7 +177,12 @@ async function bootstrapApp() {
   // plugin repos show up without an app rebuild. Only when plugins are in use; the
   // meta check is tiny and the full bundle downloads only when it actually changed.
   if (PluginManager.pluginsEnabled) {
-    PluginManager.refreshProviders().catch(() => {});
+    // Defer the ~3-4 MB providers.json fetch + JSON.parse so it does not block the
+    // initial home render/card focus on constrained TVs. The baked provider bundle is
+    // used until this swaps in; plugins aren't needed until a stream is opened.
+    setTimeout(() => {
+      PluginManager.refreshProviders().catch(() => {});
+    }, 6000);
   }
 
   AuthManager.subscribe((state) => {
@@ -216,13 +224,60 @@ async function bootstrapApp() {
     }
   });
 
+  void autoPairTMovie();
   await AuthManager.bootstrap();
+  // Home hides the splash once its rows (repos/catalogs) are ready, so the
+  // fullscreen logo+spinner covers the whole startup. For non-home landing
+  // screens (profile select / sign-in), hide shortly after they mount.
+  setTimeout(() => {
+    if (Router.getCurrent && Router.getCurrent() !== "home") {
+      hideBootSplash();
+    }
+  }, 900);
+}
+
+function hideBootSplash() {
+  const splash = document.getElementById("boot-splash");
+  if (!splash) {
+    return;
+  }
+  splash.classList.add("boot-splash-hide");
+  setTimeout(() => {
+    try { splash.remove(); } catch (_) { /* ignore */ }
+  }, 420);
+}
+
+window.__nuvioHideSplash = hideBootSplash;
+
+// Keep the TMovie torrent resolver working without manual setup: if it is not
+// currently paired/reachable, silently discover the server on the LAN and pair.
+// This survives app reinstalls/updates that reset local settings.
+async function autoPairTMovie() {
+  try {
+    const settings = TMovieSettingsStore.get();
+    if (settings.serverUrl && settings.paired) {
+      const status = await TMovieApi.getStatus(settings.serverUrl, settings.apiToken);
+      if (status.ok && status.installed) {
+        return;
+      }
+    }
+    const result = await TMovieDiscovery.discover();
+    if (result.serverUrl) {
+      TMovieSettingsStore.set({ serverUrl: result.serverUrl, paired: true, enabled: true });
+    }
+  } catch (_) {
+    // Best effort; user can still pair manually in Settings.
+  }
 }
 
 async function bootstrapAddonRemoteMode() {
   await renderAddonRemotePage();
   appShellRendered = true;
+  hideBootSplash();
 }
+
+// Safety net: never let the boot splash get stuck if bootstrap hangs.
+setTimeout(hideBootSplash, 15000);
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

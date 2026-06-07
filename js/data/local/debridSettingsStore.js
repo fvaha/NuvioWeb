@@ -18,6 +18,8 @@ export const DEBRID_SETTINGS_DEFAULTS = {
   streamDolbyVisionFilter: "ANY",
   streamHdrFilter: "ANY",
   streamCodecFilter: "ANY",
+  streamAudioFilter: "ANY",
+  applyFiltersToAllSources: false,
   streamBadgesEnabled: true,
   streamPreferences: null,
   streamNameTemplate: "{stream.resolution::=2160p[\"4K \"||\"\"]}{stream.resolution::=1440p[\"QHD \"||\"\"]}{stream.resolution::=1080p[\"FHD \"||\"\"]}{stream.resolution::=720p[\"HD \"||\"\"]}{stream.resolution::exists[\"\"||\"Direct \"]}{service.shortName::exists[\"{service.shortName} \"||\"Debrid \"]}Instant",
@@ -29,7 +31,8 @@ const ENUMS = {
   streamMinimumQuality: new Set(["ANY", "P720", "P1080", "P2160"]),
   streamDolbyVisionFilter: new Set(["ANY", "EXCLUDE", "ONLY"]),
   streamHdrFilter: new Set(["ANY", "EXCLUDE", "ONLY"]),
-  streamCodecFilter: new Set(["ANY", "H264", "HEVC", "AV1"])
+  streamCodecFilter: new Set(["ANY", "H264", "HEVC", "AV1"]),
+  streamAudioFilter: new Set(["ANY", "EXCLUDE_HD"])
 };
 
 function normalizeEnum(value, key) {
@@ -74,6 +77,8 @@ function normalizeDebridSettings(value = {}) {
     streamDolbyVisionFilter: normalizeEnum(source.streamDolbyVisionFilter, "streamDolbyVisionFilter"),
     streamHdrFilter: normalizeEnum(source.streamHdrFilter, "streamHdrFilter"),
     streamCodecFilter: normalizeEnum(source.streamCodecFilter, "streamCodecFilter"),
+    streamAudioFilter: normalizeEnum(source.streamAudioFilter, "streamAudioFilter"),
+    applyFiltersToAllSources: Boolean(source.applyFiltersToAllSources),
     streamBadgesEnabled: source.streamBadgesEnabled !== false,
     streamPreferences: normalizeStreamPreferences(source.streamPreferences),
     streamNameTemplate: String(source.streamNameTemplate || DEBRID_SETTINGS_DEFAULTS.streamNameTemplate),
